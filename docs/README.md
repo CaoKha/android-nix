@@ -231,7 +231,7 @@ public class CheckupComputer {
 
 - Updated the Java test folder path from **JNILib/src/test/java/test/kolibree/com/kolibreejnitest** to **JNILib/src/test/java/com/kolibree/**.
 
-- Renamed **ExampleUnitTest.java** to **CheckupComputerTest.java** and wrote the tests.
+- Renamed **ExampleUnitTest.java** to **CheckupComputerUnitTest.java** and wrote the tests.
 
 - Created a [Makefile](../Makefile) in the project root to simplify the build process.
 
@@ -239,6 +239,58 @@ To run the Java test, use:
 
 ```bash
 make test_java
+```
+
+Expected output:
+
+```bash
+❯ make test_java
+Downloading JUnit JAR...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  375k  100  375k    0     0  2487k      0 --:--:-- --:--:-- --:--:-- 2503k
+JUnit JAR downloaded successfully.
+Downloading Hamcrest JAR...
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 45024  100 45024    0     0   433k      0 --:--:-- --:--:-- --:--:--  435k
+Hamcrest JAR downloaded successfully.
+Compiling C++ code for Linux...
+cd build/cpp/linux && cmake /home/nck13/Documents/develop/github/caokhacpp/JNILib -G Ninja -DBUILD_TESTS=ON
+-- Configuring for native Linux build
+-- The C compiler identification is GNU 12.2.0
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /nix/store/h5003wsy3qqimqvrkn3bc5mwq4hhidag-gcc-wrapper-12.2.0/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /nix/store/h5003wsy3qqimqvrkn3bc5mwq4hhidag-gcc-wrapper-12.2.0/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/nck13/Documents/develop/github/caokhacpp/build/cpp/linux
+cd build/cpp/linux && ninja
+[6/6] Linking CXX executable checkupcomputing_test
+C++ compilation completed.
+Copying native library to build/java/libs...
+Native library copied successfully.
+Compiling main Java classes...
+Main Java classes compiled successfully.
+Compiling test Java classes...
+Test Java classes compiled successfully.
+Running Java unit tests...
+JUnit version 4.13.2
+...
+Time: 0.009
+
+OK (3 tests)
+
+Java unit tests executed successfully.
+
 ```
 
 ## Step 7: Makefile Setup
