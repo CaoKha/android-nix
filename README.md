@@ -1,8 +1,14 @@
+# Progress Status
+
+[My current progress](./docs/README.md)
+
 # Kolibree C++ / JNI test
+
 Your task is to write a processing API that takes a raw brushing session and computes a checkup for that session.
 
 ## How a brushing works
-###### The user will brush their teeth and at the end of the brushing, the whole brushing data is sent at once to the app.
+
+###### The user will brush their teeth and at the end of the brushing, the whole brushing data is sent at once to the app
 
 - Users will brush sequentially different zones of their mouths, however they can brush again a zone they had already brushed.
 - The toothbrush records the brushing as an array of “brushing passes”. A brushing pass records a duration, and the zone brushed. Every time the user changes zones, a new brushing pass is created.
@@ -10,11 +16,13 @@ Your task is to write a processing API that takes a raw brushing session and com
 - The mouth is split whether into 8, 12, or 16 zones depending on the settings chosen for the brushing. This setting is set before the brushing starts and doesn't change during the session.
 
 ###### Those 3 enums are already defined for you in the Java sources
+
 `public enum MouthZones8`
 `public enum MouthZones12`
 `public enum MouthZones16`
 
 ## The checkup
+
 For each brushing a user performs with our connected toothbrush, a checkup is
 computed.
 
@@ -42,9 +50,11 @@ each zone is computed, then the score per zone is computed using the total
 time and the target duration.
 
 ## Example
+
 If the input and expected output data for an 8-zones brushing were to be represented as JSON, this is what they could look like:
 
 _Input_
+
 ```
 {
   "passes":
@@ -68,7 +78,9 @@ _Input_
   ]
 }
 ```
+
 _Output_
+
 ```
 {
   "LoLeftExt8": 80,
@@ -81,7 +93,9 @@ _Output_
   "UpRightInt8": 70
 }
 ```
+
 ## Requirements
+
 - The Android app should only have to call Java code to access your API.
 - The processing of the data is done in C++, and the checkup is directly returned to the Android app as a Java object.
 - We need to be able to process brushings encoded for 8, 12 or 16 mouth zones.
@@ -89,4 +103,5 @@ _Output_
 - Each brushing is encoded with a predefined amount of zones that is not going to change during a brushing.
 
 ## Advice
+
 - The code is given as sample, meaning that you are free to modify it to adapt with your design and assumptions. Just be sure to explain and document which assumptions you have made.

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 using namespace kolibree;
 
@@ -84,7 +85,7 @@ template <typename EnumType> void runTest(const TestData<EnumType> &testData) {
   bool allPassed = true;
   for (const auto &expected : testData.outputs) {
     float actual = checkup.coverageForZone(expected.zone);
-    if (std::abs(actual - expected.coverage) > 0.001f) {
+    if (std::fabs(actual - expected.coverage) > 0.001f) {
       std::cout << "Test failed for zone " << enumToString(expected.zone)
                 << ". Expected: " << expected.coverage << ", Actual: " << actual
                 << std::endl;
