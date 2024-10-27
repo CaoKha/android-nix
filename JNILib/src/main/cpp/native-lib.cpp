@@ -4,7 +4,7 @@
 #include <jni.h> // JNI header provided by JDK
 #include <string>
 
-using namespace kolibree; // Using the kolibree namespace
+using namespace kolibree;
 
 // Helper function to get the JNI class descriptor from a Java class
 std::string getClassDescriptor(JNIEnv *env, jclass javaClass) {

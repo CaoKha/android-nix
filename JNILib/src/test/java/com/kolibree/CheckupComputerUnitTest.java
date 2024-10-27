@@ -18,7 +18,7 @@ public class CheckupComputerUnitTest {
   @Test
   public void testComputeCheckup8() {
     // Create a Brushing8 object with 8 zones
-    Brushing8 brushing = new Brushing8(8);
+    Brushing8 brushing = new Brushing8();
 
     // Add BrushingPass8 instances
     brushing.addPass(new BrushingPass8(0.0f, 8.0f, MouthZones8.LoLeftExt8));
@@ -50,7 +50,7 @@ public class CheckupComputerUnitTest {
   @Test
   public void testComputeCheckup12() {
     // Create a Brushing12 object with 12 zones
-    Brushing12 brushing = new Brushing12(12);
+    Brushing12 brushing = new Brushing12();
 
     // Add BrushingPass12 instances
     brushing.addPass(new BrushingPass12(0.0f, 10.0f, MouthZones12.LoIncisorExt12));
@@ -85,7 +85,7 @@ public class CheckupComputerUnitTest {
   @Test
   public void testComputeCheckup16() {
     // Create a Brushing16 object with 16 zones
-    Brushing16 brushing = new Brushing16(16);
+    Brushing16 brushing = new Brushing16();
 
     // Add BrushingPass16 instances
     brushing.addPass(new BrushingPass16(0.0f, 12.0f, MouthZones16.LoIncisorExt16));

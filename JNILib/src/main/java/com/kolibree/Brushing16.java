@@ -8,8 +8,8 @@ public class Brushing16 {
     public int numZones;
 
     // Constructor requiring an int parameter
-    public Brushing16(int numZones) {
-        this.numZones = numZones;
+    public Brushing16() {
+        this.numZones = 16;
         this.passes = new ArrayList<>();
     }
 
