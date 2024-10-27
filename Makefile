@@ -78,7 +78,7 @@ compile_cpp_linux:
 	@cp $(CPP_LINUX_BUILD_DIR)/libnative-lib.so $(JAVA_LIBS_DIR)/ || { echo "Failed to copy native library"; exit 1; }
 	@echo "Native library copied successfully."
 
-# Compile C++ Code for Android (Optional)
+# Compile C++ Code for Android
 compile_cpp_android:
 	@echo "Compiling C++ code for Android..."
 	@mkdir -p $(CPP_ANDROID_BUILD_DIR)
