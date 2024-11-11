@@ -7,12 +7,16 @@ PROJECT_ROOT := $(shell pwd)
 # Java Directories
 JAVA_SRC_DIR := JNILib/src/main/java
 JAVA_TEST_SRC_DIR := JNILib/src/test/java
+ANDROID_TEST_SRC_DIR := JNILib/src/androidTest/java
 JAVA_CLASSES_DIR := build/java/classes
 JAVA_LIBS_DIR := build/java/libs
 
+# Define the jniLibs directory for Android native libraries
+JNI_LIBS_DIR := JNILib/src/main/jniLibs
+
 # C++ Directories
 CPP_LINUX_BUILD_DIR := build/cpp/linux
-CPP_ANDROID_BUILD_DIR := build/cpp/android
+CPP_ANDROID_BUILD_DIR := build/cpp/android/$(ANDROID_ABI)
 CPP_SOURCE_DIR := JNILib/src/main/cpp
 CMAKELISTS_DIR := JNILib
 
@@ -23,6 +27,28 @@ JUNIT_URL := https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
 HAMCREST_JAR := $(JAVA_LIBS_DIR)/hamcrest-core-1.3.jar
 HAMCREST_URL := https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
 
+# AndroidX Test Libraries (AAR)
+ANDROIDX_TEST_RUNNER_AAR := $(JAVA_LIBS_DIR)/androidx-test-runner-1.6.2.aar
+ANDROIDX_TEST_CORE_AAR := $(JAVA_LIBS_DIR)/androidx-test-core-1.6.1.aar
+ANDROIDX_TEST_EXT_JUNIT_AAR := $(JAVA_LIBS_DIR)/androidx-test-ext-junit-1.2.1.aar
+ANDROIDX_TEST_EXPRESSO_CORE_AAR := $(JAVA_LIBS_DIR)/androidx-test-espresso-core-3.6.1.aar
+
+# AndroidX Test Libraries (JAR)
+ANDROIDX_ANNOTATION_JAR := $(JAVA_LIBS_DIR)/androidx-annotation-1.9.1.jar
+
+# Extracted JARs from AARs
+ANDROIDX_TEST_RUNNER_JAR := $(JAVA_LIBS_DIR)/androidx-test-runner-1.6.2.jar
+ANDROIDX_TEST_CORE_JAR := $(JAVA_LIBS_DIR)/androidx-test-core-1.6.1.jar
+ANDROIDX_TEST_EXT_JUNIT_JAR := $(JAVA_LIBS_DIR)/androidx-test-ext-junit-1.2.1.jar
+ANDROIDX_TEST_EXPRESSO_CORE_JAR := $(JAVA_LIBS_DIR)/androidx-test-espresso-core-3.6.1.jar
+
+# AndroidX Test Libraries URLs
+ANDROIDX_TEST_RUNNER_URL := https://maven.google.com/androidx/test/runner/1.6.2/runner-1.6.2.aar
+ANDROIDX_TEST_CORE_URL := https://maven.google.com/androidx/test/core/1.6.1/core-1.6.1.aar
+ANDROIDX_TEST_EXT_JUNIT_URL := https://maven.google.com/androidx/test/ext/junit/1.2.1/junit-1.2.1.aar
+ANDROIDX_ANNOTATION_URL := https://maven.google.com/androidx/annotation/annotation/1.9.1/annotation-1.9.1.jar
+ANDROIDX_TEST_EXPRESSO_CORE_URL := https://maven.google.com/androidx/test/espresso/espresso-core/3.6.1/espresso-core-3.6.1.aar
+
 # Native Library
 NATIVE_LIB_SRC := $(CPP_LINUX_BUILD_DIR)/libnative-lib.so
 NATIVE_LIB_DEST := $(JAVA_LIBS_DIR)/libnative-lib.so
@@ -31,11 +57,40 @@ NATIVE_LIB_DEST := $(JAVA_LIBS_DIR)/libnative-lib.so
 CPP_TEST_EXEC := $(CPP_LINUX_BUILD_DIR)/checkupcomputing_test
 
 # Java Test Class
-TEST_CLASS := com.kolibree.CheckupComputerUnitTest
+JAVA_UNITTEST_CLASS := com.kolibree.CheckupComputerUnitTest
+
+# Android Instrumented Test Variables
+ANDROID_TEST_CLASSES_DIR := $(JAVA_CLASSES_DIR)
+ANDROID_DEX_OUTPUT_DIR := build/java/dex/android_test
+ANDROID_APK_DIR := build/java/apk/android_test
+ANDROID_UNSIGNED_APK := $(ANDROID_APK_DIR)/app-unsigned.apk
+ANDROID_SIGNED_APK := $(ANDROID_APK_DIR)/app-signed.apk
+ANDROID_TEST_MANIFEST := JNILib/src/androidTest/AndroidManifest.xml
+ANDROID_TEST_PACKAGE := com.kolibree
+ANDROID_TEST_RUNNER := androidx.test.runner.AndroidJUnitRunner
+
+# Keystore Configuration (Using project-relative debug keystore)
+DEBUG_KEYSTORE := $(PROJECT_ROOT)/build/java/debug_keystore/debug.keystore
+DEBUG_KEY_ALIAS := androiddebugkey
+DEBUG_KEYSTORE_PASSWORD := android
+DEBUG_KEY_PASSWORD := android
+
+# Android SDK Configuration
+# Path to android.jar for the specified API level
+ANDROID_PLATFORM_JAR := $(ANDROID_HOME)/platforms/android-$(ANDROID_PLATFORM)/android.jar
+
+# Emulator setup variables
+AVD_NAME := pixel_emu
+ANDROID_PLATFORM := 30
+ANDROID_SYSTEM_IMAGE := $(SYSTEM_IMAGE)
+AVD_DEVICE := pixel
+AVDMANAGER := avdmanager
 
 # Phony Targets
 .PHONY: all download_jars compile_cpp_linux compile_cpp_android compile_java_classes \
-        compile_java_tests run_java_tests run_cpp_linux_tests test_cpp test_java test_all clean
+        compile_java_tests run_java_tests run_cpp_linux_tests test_cpp test_java \
+				compile_android_tests \
+				test_all clean
 
 # Default Target
 all: test_all
@@ -50,7 +105,13 @@ test_cpp: compile_cpp_linux run_cpp_linux_tests
 test_java: download_jars compile_cpp_linux compile_java_classes compile_java_tests run_java_tests
 
 # Download JARs if they are missing
-download_jars: $(JUNIT_JAR) $(HAMCREST_JAR)
+download_jars: $(JUNIT_JAR) \
+	$(HAMCREST_JAR) \
+	$(ANDROIDX_TEST_RUNNER_AAR) \
+	$(ANDROIDX_TEST_CORE_AAR) \
+	$(ANDROIDX_TEST_EXT_JUNIT_AAR) \
+	$(ANDROIDX_TEST_EXPRESSO_CORE_AAR) \
+	$(ANDROIDX_ANNOTATION_JAR)
 
 # Rule to download JUnit JAR
 $(JUNIT_JAR):
@@ -65,6 +126,69 @@ $(HAMCREST_JAR):
 	@mkdir -p $(JAVA_LIBS_DIR)
 	@curl -L -o $@ $(HAMCREST_URL) || { echo "Failed to download Hamcrest JAR"; exit 1; }
 	@echo "Hamcrest JAR downloaded successfully."
+
+# Rule to download Androidx Annotation JAR
+$(ANDROIDX_ANNOTATION_JAR):
+	@echo "Downloading Androidx Annotation JAR..."
+	@mkdir -p $(JAVA_LIBS_DIR)
+	@curl -L -o $@ $(ANDROIDX_ANNOTATION_URL) || { echo "Failed to download Androidx Annotation JAR"; exit 1; }
+	@echo "Androidx Annotation JAR downloaded successfully."
+
+# Rule to download AndroidX Test Runner AAR
+$(ANDROIDX_TEST_RUNNER_AAR):
+	@echo "Downloading AndroidX Test Runner AAR..."
+	@mkdir -p $(JAVA_LIBS_DIR)
+	@curl -L -f -s -S -o $@ $(ANDROIDX_TEST_RUNNER_URL) || { echo "Failed to download AndroidX Test Runner AAR"; exit 1; }
+	@echo "AndroidX Test Runner AAR downloaded successfully."
+	@echo "Extracting classes.jar from AndroidX Test Runner AAR..."
+	@unzip -q -o $@ classes.jar -d $(JAVA_LIBS_DIR) || { echo "Failed to extract classes.jar from AndroidX Test Runner AAR"; exit 1; }
+	@mv $(JAVA_LIBS_DIR)/classes.jar $(ANDROIDX_TEST_RUNNER_JAR) || { echo "Failed to rename classes.jar for AndroidX Test Runner"; exit 1; }
+	@echo "classes.jar extracted and renamed to $(ANDROIDX_TEST_RUNNER_JAR)"
+	
+# Rule to download AndroidX Test Core AAR
+$(ANDROIDX_TEST_CORE_AAR):
+	@echo "Downloading AndroidX Test Core AAR..."
+	@mkdir -p $(JAVA_LIBS_DIR)
+	@curl -L -f -s -S -o $@ $(ANDROIDX_TEST_CORE_URL) || { echo "Failed to download AndroidX Test Core AAR"; exit 1; }
+	@echo "AndroidX Test Core AAR downloaded successfully."
+	@echo "Extracting classes.jar from AndroidX Test Core AAR..."
+	@unzip -q -o $@ classes.jar -d $(JAVA_LIBS_DIR) || { echo "Failed to extract classes.jar from AndroidX Test Core AAR"; exit 1; }
+	@mv $(JAVA_LIBS_DIR)/classes.jar $(ANDROIDX_TEST_CORE_JAR) || { echo "Failed to rename classes.jar for AndroidX Test Core"; exit 1; }
+	@echo "classes.jar extracted and renamed to $(ANDROIDX_TEST_CORE_JAR)"
+
+# Rule to download AndroidX Test Core AAR
+$(ANDROIDX_TEST_EXPRESSO_CORE_AAR):
+	@echo "Downloading AndroidX Test Expresso Core AAR..."
+	@mkdir -p $(JAVA_LIBS_DIR)
+	@curl -L -f -s -S -o $@ $(ANDROIDX_TEST_EXPRESSO_CORE_URL) || { echo "Failed to download AndroidX Test Expresso Core AAR"; exit 1; }
+	@echo "AndroidX Test Expresso Core AAR downloaded successfully."
+	@echo "Extracting classes.jar from AndroidX Test Expresso Core AAR..."
+	@unzip -q -o $@ classes.jar -d $(JAVA_LIBS_DIR) || { echo "Failed to extract classes.jar from AndroidX Test Expresso Core AAR"; exit 1; }
+	@mv $(JAVA_LIBS_DIR)/classes.jar $(ANDROIDX_TEST_EXPRESSO_CORE_JAR) || { echo "Failed to rename classes.jar for AndroidX Test Expresso Core"; exit 1; }
+	@echo "classes.jar extracted and renamed to $(ANDROIDX_TEST_EXPRESSO_CORE_JAR)"
+	
+# Rule to download AndroidX Test Ext JUnit AAR
+$(ANDROIDX_TEST_EXT_JUNIT_AAR):
+	@echo "Downloading AndroidX Test Ext JUnit AAR..."
+	@mkdir -p $(JAVA_LIBS_DIR)
+	@curl -L -f -s -S -o $@ $(ANDROIDX_TEST_EXT_JUNIT_URL) || { echo "Failed to download AndroidX Test Ext JUnit AAR"; exit 1; }
+	@echo "AndroidX Test Ext JUnit AAR downloaded successfully."
+	@echo "Extracting classes.jar from AndroidX Test Ext JUnit AAR..."
+	@unzip -q -o $@ classes.jar -d $(JAVA_LIBS_DIR) || { echo "Failed to extract classes.jar from AndroidX Test Ext JUnit AAR"; exit 1; }
+	@mv $(JAVA_LIBS_DIR)/classes.jar $(ANDROIDX_TEST_EXT_JUNIT_JAR) || { echo "Failed to rename classes.jar for AndroidX Test Ext JUnit"; exit 1; }
+	@echo "classes.jar extracted and renamed to $(ANDROIDX_TEST_EXT_JUNIT_JAR)"
+
+# Generate Debug Keystore if it doesn't exist
+$(DEBUG_KEYSTORE):
+	@echo "Generating debug keystore if it doesn't exist..."
+	@mkdir -p $(dir $@)
+	@if [ ! -f $@ ]; then \
+		keytool -genkey -v -keystore $@ -alias $(DEBUG_KEY_ALIAS) -storepass $(DEBUG_KEYSTORE_PASSWORD) \
+			-keypass $(DEBUG_KEY_PASSWORD) -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Default Debug, OU=Development, O=Company, L=City, S=State, C=US"; \
+		echo "Debug keystore generated successfully."; \
+	else \
+		echo "Debug keystore already exists at $@"; \
+	fi
 
 # Compile C++ Code for Linux
 compile_cpp_linux:
@@ -85,6 +209,15 @@ compile_cpp_android:
 	cd $(CPP_ANDROID_BUILD_DIR) && cmake $(PROJECT_ROOT)/$(CMAKELISTS_DIR) -G Ninja -DCROSS_COMPILE_ANDROID=ON
 	cd $(CPP_ANDROID_BUILD_DIR) && ninja
 	@echo "C++ compilation for Android completed."
+	@echo "Checking and copying native library for Android to $(JNI_LIBS_DIR)..."
+	@if [ -f $(CPP_ANDROID_BUILD_DIR)/libnative-lib.so ]; then \
+		mkdir -p $(JNI_LIBS_DIR)/$(ANDROID_ABI); \
+		cp $(CPP_ANDROID_BUILD_DIR)/libnative-lib.so $(JNI_LIBS_DIR)/$(ANDROID_ABI)/; \
+		echo "Native library copied successfully to $(JNI_LIBS_DIR)/$(ANDROID_ABI)."; \
+	else \
+		echo "Native library not found: $(CPP_ANDROID_BUILD_DIR)/libnative-lib.so"; \
+		exit 1; \
+	fi
 
 # Compile Main Java Classes
 compile_java_classes:
@@ -94,17 +227,137 @@ compile_java_classes:
 	@echo "Main Java classes compiled successfully."
 
 # Compile Test Java Classes
-compile_java_tests:
+compile_java_tests: download_jars compile_java_classes
 	@echo "Compiling test Java classes..."
 	@javac -d $(JAVA_CLASSES_DIR) -cp $(JAVA_CLASSES_DIR):$(JUNIT_JAR):$(HAMCREST_JAR) $(wildcard $(JAVA_TEST_SRC_DIR)/com/kolibree/*.java) || { echo "Failed to compile test Java classes"; exit 1; }
 	@echo "Test Java classes compiled successfully."
+
+# Compile Android Instrumented Test Java Classes
+compile_android_tests: $(DEBUG_KEYSTORE) download_jars compile_cpp_android compile_java_classes
+	@echo "Compiling Android instrumented test classes..."
+	@mkdir -p $(ANDROID_TEST_CLASSES_DIR)
+	@javac -Xlint:deprecation --release 11 -d $(ANDROID_TEST_CLASSES_DIR) \
+		-cp "$(JAVA_CLASSES_DIR):$(JUNIT_JAR):$(HAMCREST_JAR):$(ANDROIDX_TEST_RUNNER_JAR):$(ANDROIDX_TEST_CORE_JAR):$(ANDROIDX_TEST_EXT_JUNIT_JAR):$(ANDROIDX_ANNOTATION_JAR):$(ANDROID_PLATFORM_JAR)" \
+		$(wildcard $(ANDROID_TEST_SRC_DIR)/com/kolibree/*.java) || { echo "Failed to compile Android instrumented test classes"; exit 1; }
+	@echo "Android instrumented test classes compiled successfully."
+
+# Convert Android Test Classes to Dex
+convert_android_tests_to_dex: compile_android_tests
+	@echo "Converting Android test classes to Dex format..."
+	@mkdir -p $(ANDROID_DEX_OUTPUT_DIR)
+	@d8 --min-api 26 --no-desugaring $(wildcard $(ANDROID_TEST_CLASSES_DIR)/com/kolibree/*.class) \
+	    --output $(ANDROID_DEX_OUTPUT_DIR) || { echo "Failed to convert Android test classes to Dex"; exit 1; }
+	@echo "Dex conversion completed."
+
+# Assemble Android Test APK without assets or resources
+assemble_android_test_apk: convert_android_tests_to_dex
+	@echo "Assembling Android Test APK..."
+	@mkdir -p $(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)
+
+	# Copy AndroidManifest.xml
+	@if [ -f $(ANDROID_TEST_MANIFEST) ]; then \
+		cp $(ANDROID_TEST_MANIFEST) $(ANDROID_APK_DIR)/AndroidManifest.xml || { echo "Failed to copy AndroidManifest.xml"; exit 1; }; \
+	else \
+		echo "AndroidManifest.xml for tests not found at $(ANDROID_TEST_MANIFEST)"; \
+		exit 1; \
+	fi
+
+	# Copy classes.dex
+	@cp $(ANDROID_DEX_OUTPUT_DIR)/classes.dex $(ANDROID_APK_DIR)/ || { echo "Failed to copy classes.dex"; exit 1; }
+
+	# Copy the compiled test classes into the APK
+	@cp -r $(JAVA_CLASSES_DIR)/* $(ANDROID_APK_DIR)/ || { echo "Failed to copy compiled test classes"; exit 1; }
+
+	# Copy native library to the correct ABI directory
+	@cp $(JNI_LIBS_DIR)/$(ANDROID_ABI)/libnative-lib.so $(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)/ || { echo "Failed to copy native library for $ANDROID_ABI"; exit 1; }
+
+	# Use aapt to package APK with AndroidManifest.xml and compiled classes
+	@aapt package -f \
+		-M $(ANDROID_APK_DIR)/AndroidManifest.xml \
+		-F $(ANDROID_APK_DIR)/app-unsigned.apk \
+		-I $(ANDROID_HOME)/platforms/android-$(ANDROID_PLATFORM)/android.jar || { echo "Failed to package APK"; exit 1; }
+
+	# Add classes.dex, test classes, and native libraries using zip
+	@echo "Adding classes.dex, test classes, and libnative-lib.so to APK..."
+	@zip -r $(ANDROID_APK_DIR)/app-unsigned.apk \
+		$(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)/libnative-lib.so \
+		|| { echo "Failed to add files to APK"; exit 1; }
+
+	@echo "Android Test APK assembled successfully."
+
+# Sign the APK with a debug key
+sign_android_test_apk: assemble_android_test_apk $(DEBUG_KEYSTORE)
+	@echo "Signing Android Test APK..."
+	@apksigner sign --ks $(DEBUG_KEYSTORE) --ks-key-alias $(DEBUG_KEY_ALIAS) \
+	    --ks-pass pass:$(DEBUG_KEYSTORE_PASSWORD) --key-pass pass:$(DEBUG_KEY_PASSWORD) \
+	    --min-sdk-version 26 --v1-signing-enabled \
+	    --out $(ANDROID_APK_DIR)/app-signed.apk $(ANDROID_APK_DIR)/app-unsigned.apk || { echo "Failed to sign APK"; exit 1; }
+# Rename app-signed.apk to base.apk
+	@mv $(ANDROID_APK_DIR)/app-signed.apk $(ANDROID_APK_DIR)/base.apk || { echo "Failed to rename APK"; exit 1; }
+	@echo "Android Test APK signed successfully."
+
+# Create AVD
+create_avd:
+	@echo "Checking if AVD named $(AVD_NAME) exists..."
+	@if ! avdmanager list avd | grep -q $(AVD_NAME); then \
+		echo "AVD $(AVD_NAME) does not exist. Creating AVD..."; \
+		$(AVDMANAGER) create avd \
+			-n $(AVD_NAME) \
+			-k "system-images;android-$(ANDROID_PLATFORM);$(ANDROID_SYSTEM_IMAGE);$(ANDROID_ABI)" \
+			-d $(AVD_DEVICE) || { echo "Failed to create AVD"; exit 1; }; \
+	else \
+		echo "AVD $(AVD_NAME) already exists."; \
+	fi
+	@echo "AVD $(AVD_NAME) created successfully."
+
+# Start the emulator if not already running
+start_emulator: stop_emulator create_avd
+	@if ! adb shell exit 2>/dev/null; then \
+		echo "Starting emulator $(AVD_NAME)..."; \
+		emulator -avd $(AVD_NAME) -no-snapshot-load -no-window & \
+		sleep 30; \
+	else \
+		echo "Emulator $(AVD_NAME) is already running."; \
+	fi
+
+stop_emulator:
+	@echo "Stopping emulator if running..."
+	@emulator_device=$$(adb devices | grep emulator | awk '{print $$1}'); \
+	if [ -n "$$emulator_device" ]; then \
+		echo "Emulator found: $$emulator_device, stopping..."; \
+		adb -s $$emulator_device emu kill || { echo "Failed to stop the emulator"; exit 1; }; \
+		sleep 5; \
+		if adb devices | grep -q "$$emulator_device"; then \
+			echo "Emulator $$emulator_device is still running, failed to stop."; \
+			exit 1; \
+		else \
+			echo "Emulator $$emulator_device stopped successfully."; \
+		fi \
+	else \
+		echo "No emulator is currently running."; \
+	fi
+
+# Install the APK on the emulator
+install_android_test_apk: sign_android_test_apk
+	@echo "Uninstalling any existing version of the app from the emulator..."
+	@adb uninstall $(ANDROID_TEST_PACKAGE) || echo "No existing app to uninstall"
+	@echo "Installing Android Test APK on the emulator..."
+	@adb -s emulator-5554 install -r $(ANDROID_APK_DIR)/base.apk || { echo "Failed to install APK"; exit 1; }
+	@echo "Android Test APK installed successfully."
+
+# Run Instrumented Tests on Emulator
+run_android_instrumented_tests: start_emulator install_android_test_apk
+	@echo "Running instrumented tests on the emulator..."
+	@adb shell am instrument -w -e package com.kolibree \
+	    $(ANDROID_TEST_PACKAGE)/$(ANDROID_TEST_RUNNER) || { echo "Failed to run instrumented tests"; exit 1; }
+	@echo "Instrumented tests executed successfully."
 
 # Run Java Unit Tests
 run_java_tests:
 	@echo "Running Java unit tests..."
 	@java -cp $(JAVA_CLASSES_DIR):$(JUNIT_JAR):$(HAMCREST_JAR) \
 	     -Djava.library.path=$(JAVA_LIBS_DIR) \
-	     org.junit.runner.JUnitCore $(TEST_CLASS) || { echo "Java unit tests failed"; exit 1; }
+	     org.junit.runner.JUnitCore $(JAVA_UNITTEST_CLASS) || { echo "Java unit tests failed"; exit 1; }
 	@echo "Java unit tests executed successfully."
 
 # Define CPP_TEST_EXEC as a target that depends on compile_cpp_linux
@@ -125,8 +378,5 @@ run_cpp_linux_tests: $(CPP_TEST_EXEC)
 # Clean Build Artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf $(JAVA_CLASSES_DIR)
-	@rm -rf $(JAVA_LIBS_DIR)
-	@rm -rf $(CPP_LINUX_BUILD_DIR)
-	@rm -rf $(CPP_ANDROID_BUILD_DIR)
+	@rm -rf build/*
 	@echo "Build artifacts cleaned."

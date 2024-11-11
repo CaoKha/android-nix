@@ -1,2 +1,2 @@
 CompileFlags:
-  CompilationDatabase: ./build/cpp/linux
+  CompilationDatabase: ./build/cpp/android/x86_64

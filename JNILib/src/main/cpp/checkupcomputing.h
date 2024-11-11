@@ -1,12 +1,15 @@
 #ifndef CHECKUPCOMPUTING_H
 #define CHECKUPCOMPUTING_H
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace kolibree {
 
+// =====================
+// CheckupComputer Enums
+// =====================
 enum class MouthZones8 {
   LoLeftExt8,
   LoLeftInt8,
@@ -52,6 +55,9 @@ enum class MouthZones16 {
   UpMolarRightOcc16
 };
 
+// =====================
+// CheckupComputer Utility Structs
+// =====================
 template <typename EnumType> struct BrushingPass {
   float timestamp;
   float duration;
@@ -70,6 +76,10 @@ public:
 private:
   std::map<EnumType, float> coverages;
 };
+
+// =====================
+// CheckupComputer Main Class
+// =====================
 
 class CheckupComputer {
 public:
@@ -91,8 +101,7 @@ template <typename EnumType> constexpr int getNumberOfZones() {
     return 0; // or throw an error
 }
 
-// Helper function to convert enum to string (you'll need to implement this for
-// each enum type)
+// Helper function to convert enum to string
 template <typename EnumType> std::string enumToString(EnumType value);
 
 } // namespace kolibree

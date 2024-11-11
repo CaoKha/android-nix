@@ -11,7 +11,7 @@ if(CROSS_COMPILE_ANDROID)
   # Retrieve environment variables into CMake variables
   set(ANDROID_NDK $ENV{ANDROID_NDK})
   set(ANDROID_ABI $ENV{ANDROID_ABI})
-  set(ANDROID_API_LEVEL $ENV{ANDROID_API_LEVEL})
+  set(ANDROID_PLATFORM $ENV{ANDROID_PLATFORM})
 
   # Validate necessary environment variables
   if(NOT ANDROID_NDK)
@@ -26,9 +26,9 @@ if(CROSS_COMPILE_ANDROID)
     Please set it to your target ABI (e.g., arm64-v8a).")
   endif()
 
-  if(NOT ANDROID_API_LEVEL)
+  if(NOT ANDROID_PLATFORM)
     message(FATAL_ERROR
-    "ANDROID_API_LEVEL environment variable is not set.
+    "ANDROID_PLATFORM environment variable is not set.
     Please set it to your target platform (e.g., 21).")
   endif()
 
@@ -60,9 +60,9 @@ if(CROSS_COMPILE_ANDROID)
 
   # Specify the Clang compilers provided by the NDK
   set(CMAKE_C_COMPILER
-    "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/${ANDROID_TRIPLE}${ANDROID_API_LEVEL}-clang")
+    "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/${ANDROID_TRIPLE}${ANDROID_PLATFORM}-clang")
   set(CMAKE_CXX_COMPILER
-    "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/${ANDROID_TRIPLE}${ANDROID_API_LEVEL}-clang++")
+    "${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin/${ANDROID_TRIPLE}${ANDROID_PLATFORM}-clang++")
 
   # Set the project name
   project(NativeLib)
@@ -75,12 +75,12 @@ if(CROSS_COMPILE_ANDROID)
   # Find the log library using the NDK's defaults
   find_library(log-lib log
     PATHS
-      ${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/${ANDROID_TRIPLE}/${ANDROID_API_LEVEL}
+      ${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/${ANDROID_TRIPLE}/${ANDROID_PLATFORM}
       NO_DEFAULT_PATH)
   if(NOT log-lib)
     message(FATAL_ERROR
     "log library not found.
-    Please check your Android NDK installation. ${ANDROID_API_LEVEL}")
+    Please check your Android NDK installation. ${ANDROID_PLATFORM}")
   else()
     message(STATUS "log library found: ${log-lib}")
   endif()

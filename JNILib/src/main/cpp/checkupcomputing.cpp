@@ -3,6 +3,9 @@
 
 namespace kolibree {
 
+// =====================
+// Function definitions for Checkup Class
+// =====================
 template <typename EnumType>
 float Checkup<EnumType>::coverageForZone(EnumType zone) const {
   auto it = coverages.find(zone);
@@ -14,6 +17,9 @@ void Checkup<EnumType>::setCoverage(EnumType zone, float coverage) {
   coverages[zone] = std::min(coverage, 1.0f);
 }
 
+// =====================
+// Function definitions for CheckupComputer Class
+// =====================
 template <typename EnumType>
 Checkup<EnumType>
 CheckupComputer::computeCheckup(const Brushing<EnumType> &brushing) {
@@ -34,7 +40,9 @@ CheckupComputer::computeCheckup(const Brushing<EnumType> &brushing) {
   return checkup;
 }
 
-// Explicit template instantiations
+// =====================
+// Template instantiations
+// =====================
 template class Checkup<MouthZones8>;
 template class Checkup<MouthZones12>;
 template class Checkup<MouthZones16>;

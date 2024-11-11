@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.kolibree">
+
+    <application>
+        <instrumentation
+            android:name="androidx.test.runner.AndroidJUnitRunner"
+            android:targetPackage="com.kolibree" />
+    </application>
+</manifest>
