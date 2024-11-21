@@ -60,26 +60,6 @@ CPP_TEST_EXEC := $(CPP_LINUX_BUILD_DIR)/checkupcomputing_test
 # Java Test Class
 JAVA_UNITTEST_CLASS := com.kolibree.CheckupComputerUnitTest
 
-# Android Instrumented Test Variables
-ANDROID_TEST_CLASSES_DIR := $(JAVA_CLASSES_DIR)
-ANDROID_DEX_OUTPUT_DIR := build/java/dex/android_test
-ANDROID_APK_DIR := build/java/apk/android_test
-ANDROID_UNSIGNED_APK := $(ANDROID_APK_DIR)/app-unsigned.apk
-ANDROID_SIGNED_APK := $(ANDROID_APK_DIR)/app-signed.apk
-ANDROID_TEST_MANIFEST := JNILib/src/androidTest/AndroidManifest.xml
-ANDROID_TEST_PACKAGE := com.kolibree
-ANDROID_TEST_RUNNER := androidx.test.runner.AndroidJUnitRunner
-
-# Keystore Configuration (Using project-relative debug keystore)
-DEBUG_KEYSTORE := $(PROJECT_ROOT)/build/java/debug_keystore/debug.keystore
-DEBUG_KEY_ALIAS := androiddebugkey
-DEBUG_KEYSTORE_PASSWORD := android
-DEBUG_KEY_PASSWORD := android
-
-# Android SDK Configuration
-# Path to android.jar for the specified API level
-ANDROID_PLATFORM_JAR := $(ANDROID_HOME)/platforms/android-$(ANDROID_PLATFORM)/android.jar
-
 # Emulator setup variables
 AVD_NAME := pixel_emu
 ANDROID_PLATFORM := 30
