@@ -1,0 +1,47 @@
+stages:
+  - test
+
+default:
+  image: debian:bullseye
+
+# Install Nix and enable flake.nix configuration
+.before_script_nix:
+  before_script:
+    # Install required utilities
+    - apt-get update && apt-get install -y curl xz-utils
+
+    # Step 1: Install Nix using Determinate Systems installer
+    - curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --no-confirm --init none
+
+    # Step 2: Source Nix profile
+    - . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+
+    # Enable experimental features for flakes
+    - mkdir -p ~/.config/nix
+    - echo "experimental-features = nix-command flakes" > ~/.config/nix/nix.conf
+
+    # Enter the Nix development environment
+    - nix develop
+
+# C++ Test Job
+test_cpp:
+  stage: test
+  extends: .before_script_nix
+  script:
+    - make test_cpp
+
+# Java Test Job
+test_java:
+  stage: test
+  extends: .before_script_nix
+  script:
+    - make test_java
+
+# Android Instrumented Test Job
+test_android:
+  stage: test
+  extends: .before_script_nix
+  script:
+    - make test_android
+  after_script:
+    - make stop_emulator

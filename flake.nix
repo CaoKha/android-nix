@@ -48,7 +48,7 @@
             systemImageTypes = ["google_apis_playstore"];
             abiVersions = ["arm64-v8a" "armeabi-v7a" "x86" "x86_64"];
             includeNDK = true;  # Include the Android NDK
-            # ndkVersions = [ "25.1.8937393" ];
+            ndkVersions = [ "26.3.11579264" ];
           };
 
           # Specify the Build Tools, Cmake version to use
@@ -65,7 +65,7 @@
               # Add necessary build inputs to the shell environment
               buildInputs = with pkgs; [
                 androidPackages.androidsdk  # Android SDK
-                # gradle  # Gradle for building Java and Android projects
+                gradle # Gradle for building Java and Android projects
                 jdk17  # Full JDK version for JNI and logging support
                 cmake  # CMake for project configuration
                 ninja  # Ninja build system

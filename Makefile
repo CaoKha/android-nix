@@ -3,6 +3,7 @@
 
 # Variables
 PROJECT_ROOT := $(shell pwd)
+GRADLE_WRAPPER := $(PROJECT_ROOT)/gradlew
 
 # Java Directories
 JAVA_SRC_DIR := JNILib/src/main/java
@@ -88,21 +89,23 @@ AVDMANAGER := avdmanager
 
 # Phony Targets
 .PHONY: all download_jars compile_cpp_linux compile_cpp_android compile_java_classes \
-        compile_java_tests run_java_tests run_cpp_linux_tests test_cpp test_java \
-				compile_android_tests \
+        compile_java_tests run_java_tests run_cpp_linux_tests test_cpp test_java test_android \
 				test_all clean
 
 # Default Target
 all: test_all
 
 # Unified Test Target: Compiles everything and runs all tests
-test_all: compile_cpp_linux run_cpp_linux_tests download_jars compile_java_classes compile_java_tests run_java_tests 
+test_all: compile_cpp_linux run_cpp_linux_tests download_jars compile_java_classes compile_java_tests run_java_tests start_emulator run_android_test
 
 # C++ Test Target: Compiles C++ components and runs C++ tests
 test_cpp: compile_cpp_linux run_cpp_linux_tests
 
 # Java Test Target: Compiles Java components and runs Java tests
 test_java: download_jars compile_cpp_linux compile_java_classes compile_java_tests run_java_tests
+
+# Android Instrumented Test Target: Compiles Java components and runs Android Instrumented Tests
+test_android: compile_cpp_android start_emulator run_android_test
 
 # Download JARs if they are missing
 download_jars: $(JUNIT_JAR) \
@@ -232,70 +235,6 @@ compile_java_tests: download_jars compile_java_classes
 	@javac -d $(JAVA_CLASSES_DIR) -cp $(JAVA_CLASSES_DIR):$(JUNIT_JAR):$(HAMCREST_JAR) $(wildcard $(JAVA_TEST_SRC_DIR)/com/kolibree/*.java) || { echo "Failed to compile test Java classes"; exit 1; }
 	@echo "Test Java classes compiled successfully."
 
-# Compile Android Instrumented Test Java Classes
-compile_android_tests: $(DEBUG_KEYSTORE) download_jars compile_cpp_android compile_java_classes
-	@echo "Compiling Android instrumented test classes..."
-	@mkdir -p $(ANDROID_TEST_CLASSES_DIR)
-	@javac -Xlint:deprecation --release 11 -d $(ANDROID_TEST_CLASSES_DIR) \
-		-cp "$(JAVA_CLASSES_DIR):$(JUNIT_JAR):$(HAMCREST_JAR):$(ANDROIDX_TEST_RUNNER_JAR):$(ANDROIDX_TEST_CORE_JAR):$(ANDROIDX_TEST_EXT_JUNIT_JAR):$(ANDROIDX_ANNOTATION_JAR):$(ANDROID_PLATFORM_JAR)" \
-		$(wildcard $(ANDROID_TEST_SRC_DIR)/com/kolibree/*.java) || { echo "Failed to compile Android instrumented test classes"; exit 1; }
-	@echo "Android instrumented test classes compiled successfully."
-
-# Convert Android Test Classes to Dex
-convert_android_tests_to_dex: compile_android_tests
-	@echo "Converting Android test classes to Dex format..."
-	@mkdir -p $(ANDROID_DEX_OUTPUT_DIR)
-	@d8 --min-api 26 --no-desugaring $(wildcard $(ANDROID_TEST_CLASSES_DIR)/com/kolibree/*.class) \
-	    --output $(ANDROID_DEX_OUTPUT_DIR) || { echo "Failed to convert Android test classes to Dex"; exit 1; }
-	@echo "Dex conversion completed."
-
-# Assemble Android Test APK without assets or resources
-assemble_android_test_apk: convert_android_tests_to_dex
-	@echo "Assembling Android Test APK..."
-	@mkdir -p $(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)
-
-	# Copy AndroidManifest.xml
-	@if [ -f $(ANDROID_TEST_MANIFEST) ]; then \
-		cp $(ANDROID_TEST_MANIFEST) $(ANDROID_APK_DIR)/AndroidManifest.xml || { echo "Failed to copy AndroidManifest.xml"; exit 1; }; \
-	else \
-		echo "AndroidManifest.xml for tests not found at $(ANDROID_TEST_MANIFEST)"; \
-		exit 1; \
-	fi
-
-	# Copy classes.dex
-	@cp $(ANDROID_DEX_OUTPUT_DIR)/classes.dex $(ANDROID_APK_DIR)/ || { echo "Failed to copy classes.dex"; exit 1; }
-
-	# Copy the compiled test classes into the APK
-	@cp -r $(JAVA_CLASSES_DIR)/* $(ANDROID_APK_DIR)/ || { echo "Failed to copy compiled test classes"; exit 1; }
-
-	# Copy native library to the correct ABI directory
-	@cp $(JNI_LIBS_DIR)/$(ANDROID_ABI)/libnative-lib.so $(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)/ || { echo "Failed to copy native library for $ANDROID_ABI"; exit 1; }
-
-	# Use aapt to package APK with AndroidManifest.xml and compiled classes
-	@aapt package -f \
-		-M $(ANDROID_APK_DIR)/AndroidManifest.xml \
-		-F $(ANDROID_APK_DIR)/app-unsigned.apk \
-		-I $(ANDROID_HOME)/platforms/android-$(ANDROID_PLATFORM)/android.jar || { echo "Failed to package APK"; exit 1; }
-
-	# Add classes.dex, test classes, and native libraries using zip
-	@echo "Adding classes.dex, test classes, and libnative-lib.so to APK..."
-	@zip -r $(ANDROID_APK_DIR)/app-unsigned.apk \
-		$(ANDROID_APK_DIR)/lib/$(ANDROID_ABI)/libnative-lib.so \
-		|| { echo "Failed to add files to APK"; exit 1; }
-
-	@echo "Android Test APK assembled successfully."
-
-# Sign the APK with a debug key
-sign_android_test_apk: assemble_android_test_apk $(DEBUG_KEYSTORE)
-	@echo "Signing Android Test APK..."
-	@apksigner sign --ks $(DEBUG_KEYSTORE) --ks-key-alias $(DEBUG_KEY_ALIAS) \
-	    --ks-pass pass:$(DEBUG_KEYSTORE_PASSWORD) --key-pass pass:$(DEBUG_KEY_PASSWORD) \
-	    --min-sdk-version 26 --v1-signing-enabled \
-	    --out $(ANDROID_APK_DIR)/app-signed.apk $(ANDROID_APK_DIR)/app-unsigned.apk || { echo "Failed to sign APK"; exit 1; }
-# Rename app-signed.apk to base.apk
-	@mv $(ANDROID_APK_DIR)/app-signed.apk $(ANDROID_APK_DIR)/base.apk || { echo "Failed to rename APK"; exit 1; }
-	@echo "Android Test APK signed successfully."
-
 # Create AVD
 create_avd:
 	@echo "Checking if AVD named $(AVD_NAME) exists..."
@@ -337,21 +276,6 @@ stop_emulator:
 		echo "No emulator is currently running."; \
 	fi
 
-# Install the APK on the emulator
-install_android_test_apk: sign_android_test_apk
-	@echo "Uninstalling any existing version of the app from the emulator..."
-	@adb uninstall $(ANDROID_TEST_PACKAGE) || echo "No existing app to uninstall"
-	@echo "Installing Android Test APK on the emulator..."
-	@adb -s emulator-5554 install -r $(ANDROID_APK_DIR)/base.apk || { echo "Failed to install APK"; exit 1; }
-	@echo "Android Test APK installed successfully."
-
-# Run Instrumented Tests on Emulator
-run_android_instrumented_tests: start_emulator install_android_test_apk
-	@echo "Running instrumented tests on the emulator..."
-	@adb shell am instrument -w -e package com.kolibree \
-	    $(ANDROID_TEST_PACKAGE)/$(ANDROID_TEST_RUNNER) || { echo "Failed to run instrumented tests"; exit 1; }
-	@echo "Instrumented tests executed successfully."
-
 # Run Java Unit Tests
 run_java_tests:
 	@echo "Running Java unit tests..."
@@ -374,6 +298,14 @@ run_cpp_linux_tests: $(CPP_TEST_EXEC)
 		exit 1; \
 	fi
 	@echo "C++ unit tests executed successfully."
+
+# Generate gradle wrapper
+generate_gradle_wrapper:
+	gradle wrapper --gradle-version 8.7
+
+# Android X86_64 Instrumented Test
+run_android_test:
+	@$(GRADLE_WRAPPER) connectedAndroidTest --info
 
 # Clean Build Artifacts
 clean:
